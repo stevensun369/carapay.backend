@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/db"
+	"backend/user"
 
 	"log"
 
@@ -17,6 +18,9 @@ func main() {
   }))
 
   db.InitDatabase()
+
+  // routes
+  user.Routes(app)
 
   app.Get("/", func (c *fiber.Ctx) error {
     return c.SendString("api is running")

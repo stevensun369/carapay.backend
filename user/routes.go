@@ -7,5 +7,9 @@ import (
 func Routes(app *fiber.App) {
   g := app.Group("/api/user")
 
+  // register
   g.Post("/register", registerUser)
+
+  // login
+  g.Post("/login", loginUser)
 }
