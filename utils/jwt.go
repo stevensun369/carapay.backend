@@ -6,7 +6,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-var JWTKey = []byte("1234567891011121314")
+var JWTKey = []byte("123456789")
 
 // claims
 type UserClaims struct {

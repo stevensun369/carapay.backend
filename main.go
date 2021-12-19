@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/db"
+	"backend/transactions"
 	"backend/user"
 
 	"log"
@@ -21,6 +22,7 @@ func main() {
 
   // routes
   user.Routes(app)
+  transactions.Routes(app)
 
   app.Get("/", func (c *fiber.Ctx) error {
     return c.SendString("api is running")
