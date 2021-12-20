@@ -2,3 +2,5 @@
 .env
 gin-bin.exe
 main.exe
+go.mod
+go.sum
