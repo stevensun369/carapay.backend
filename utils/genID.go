@@ -5,9 +5,9 @@ import (
 	"strconv"
 )
 
-func GenID() string {
+func GenID(charnum int) string {
   var ID string
-  for i := 0; i < 6; i++ {
+  for i := 0; i < charnum; i++ {
     ID += strconv.Itoa(rand.Intn(9))
   }
 

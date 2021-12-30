@@ -24,12 +24,12 @@ func registerUser(c *fiber.Ctx) error {
 
   usersCollection := db.GetCollection("users")
   
-  var userID = utils.GenID()
+  var userID = utils.GenID(6)
 
   var userGenID models.User
   userGenID = models.GetUserByID(userID)
   for userGenID.UserID != "" {
-    userID = utils.GenID()
+    userID = utils.GenID(6)
     userGenID = models.GetUserByID(userID)
   }
 
@@ -55,9 +55,9 @@ func registerUser(c *fiber.Ctx) error {
     ID: primitive.NewObjectID(),
     UserID: userID,
     Email: body["email"],
-    UserName: body["userName"],
+    Username: body["username"],
     Password: string(hashedPassword),
-    Interactions: []string {},
+    People: []string {},
     CreatedAt: time.Now(),
     UpdatedAt: time.Now(),
   }
@@ -70,9 +70,10 @@ func registerUser(c *fiber.Ctx) error {
   // generate token
   tokenString, err := utils.GenerateToken(
     user.UserID,
-    user.UserName, 
-    user.Email)
-  if err != nil {
+    user.Username, 
+    user.Email,
+  )
+    if err != nil {
     return c.Status(500).SendString(fmt.Sprintf("%v", err))
   }
 
@@ -81,9 +82,9 @@ func registerUser(c *fiber.Ctx) error {
   return c.JSON(bson.M{
     "_id": user.ID,
     "userID": user.UserID,
-    "userName": user.UserName,
+    "username": user.Username,
     "email": user.Email,
-    "interactions": user.Interactions,
+    "people": user.People,
     "createdAt": user.CreatedAt,
     "updatedAt": user.UpdatedAt,
     "token": tokenString,
@@ -94,7 +95,7 @@ func registerUser(c *fiber.Ctx) error {
 // @route  POST /api/user/login
 // @access Public
 func loginUser(c *fiber.Ctx) error {
-  // getting doby
+  // getting body
   var body map[string]string
   json.Unmarshal(c.Body(), &body)
 
@@ -114,7 +115,7 @@ func loginUser(c *fiber.Ctx) error {
 
   tokenString, err := utils.GenerateToken(
     user.UserID, 
-    user.UserName, 
+    user.Username, 
     user.Email,
   )
   if err != nil {
@@ -125,9 +126,9 @@ func loginUser(c *fiber.Ctx) error {
     return c.JSON(bson.M{
       "_id": user.ID,
       "userID": user.UserID,
-      "userName": user.UserName,
+      "username": user.Username,
       "email": user.Email,
-      "interactions": user.Interactions,
+      "people": user.People,
       "createdAt": user.CreatedAt,
       "updatedAt": user.UpdatedAt,
       "token": tokenString,
@@ -138,3 +139,123 @@ func loginUser(c *fiber.Ctx) error {
     }) 
   }
 }
+
+// @desc   Add person to people list
+// @route  POST /api/user/people
+// @access Private
+func addToPeople(c *fiber.Ctx) error {
+  // getting body
+  var body map[string]string
+  json.Unmarshal(c.Body(), &body)
+
+  userToAddID := body["userToAddID"]
+
+  usersCollection := db.GetCollection("users")
+
+  var userToAdd models.User
+  if err := usersCollection.FindOne(context.Background(), bson.M{
+    "userID": userToAddID,
+  }).Decode(&userToAdd); err != nil {
+    return c.Status(401).JSON(bson.M{
+      "message": "Nu există niciun utilizator cu ID-ul introdus.",
+    }) 
+  }
+
+  // getting the userID
+  userIDLocals := fmt.Sprintf("%v", c.Locals("userID"))
+  var userID string
+  json.Unmarshal([]byte(userIDLocals), &userID)
+
+  var user models.User
+  usersCollection.FindOneAndUpdate(context.Background(), bson.M{
+    "userID": userID,
+  }, bson.M{
+    "$push": bson.M{
+      "people": userToAddID,
+    },
+  }).Decode(&user)
+
+  user.People = append(user.People, userToAddID)
+
+  return c.JSON(user.People)
+}
+
+// @desc   Get people 
+// @route  GET /api/user/people
+// @access Private
+func getPeople(c *fiber.Ctx) error {
+  usersCollection := db.GetCollection("users")
+  userIDLocals := fmt.Sprintf("%v", c.Locals("userID"))
+  var userID string
+  json.Unmarshal([]byte(userIDLocals), &userID)
+
+  var user models.User
+  usersCollection.FindOne(context.Background(), bson.M{
+    "userID": userID,
+  }).Decode(&user)
+
+
+  return c.JSON(user.People)
+}
+
+// @desc   Change password
+// @route  POST /api/user/password
+// @access Private
+func changePassword(c *fiber.Ctx) error {
+  // getting body
+  var body map[string]string
+  json.Unmarshal(c.Body(), &body)
+
+  password := body["password"]
+  newPassword := body["newPassword"]
+
+  userIDLocals := fmt.Sprintf("%v", c.Locals("userID"))
+  var userID string
+  json.Unmarshal([]byte(userIDLocals), &userID)
+  
+  usersCollection := db.GetCollection("users")
+
+  var user models.User
+  usersCollection.FindOne(context.Background(), bson.M{
+    "userID": userID,
+  }).Decode(&user)
+
+  hashedPassword := user.Password
+
+  compareErr := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+
+  if compareErr == nil {
+    hashedPassword, err := bcrypt.GenerateFromPassword(
+      []byte(newPassword), 
+      10,
+    )
+    if err != nil {
+      return c.Status(500).SendString(fmt.Sprintf("%v", err))
+    }
+
+    usersCollection.FindOneAndUpdate(context.Background(), bson.M{
+      "userID": userID,
+    }, bson.M{
+      "$set": bson.M{
+        "password": string(hashedPassword),
+      },
+    }).Decode(&user)
+    user.Password = string(hashedPassword)
+
+    return c.JSON(bson.M{
+      "_id": user.ID,
+      "userID": user.UserID,
+      "username": user.Username,
+      "hashedPassword": []byte(hashedPassword),
+      "email": user.Email,
+      "people": user.People,
+      "createdAt": user.CreatedAt,
+      "updatedAt": user.UpdatedAt,
+    })
+  } else {
+    return c.Status(401).JSON(bson.M{
+      "message": "Nu ați introdus parola validă.",
+    }) 
+  }
+}
+

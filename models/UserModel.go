@@ -12,10 +12,10 @@ import (
 type User struct {
   ID primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	UserID       string   `json:"userID,omitempty" bson:"userID,omitempty"`
-	UserName     string   `json:"userName,omitempty" bson:"userName,omitempty"`
+	Username     string   `json:"username,omitempty" bson:"username,omitempty"`
 	Email string `json:"email,omitempty" bson:"email,omitempty"`
   Password     string   `json:"password,omitempty" bson:"password,omitempty"`
-	Interactions []string `json:"interactions,omitempty" bson:"interactions,omitempty"`
+	People []string `json:"people,omitempty" bson:"people,omitempty"`
   CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
   UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 }
