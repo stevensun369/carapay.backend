@@ -72,6 +72,7 @@ func registerUser(c *fiber.Ctx) error {
     user.UserID,
     user.Username, 
     user.Email,
+    user.People,
   )
     if err != nil {
     return c.Status(500).SendString(fmt.Sprintf("%v", err))
@@ -117,6 +118,7 @@ func loginUser(c *fiber.Ctx) error {
     user.UserID, 
     user.Username, 
     user.Email,
+    user.People,
   )
   if err != nil {
     return c.Status(500).SendString(fmt.Sprintf("%v", err))
@@ -177,7 +179,20 @@ func addToPeople(c *fiber.Ctx) error {
 
   user.People = append(user.People, userToAddID)
 
-  return c.JSON(user.People)
+  tokenString, err := utils.GenerateToken(
+    user.UserID, 
+    user.Username, 
+    user.Email,
+    user.People,
+  )
+  if err != nil {
+    return c.Status(500).SendString(fmt.Sprintf("%v", err))
+  }
+
+  return c.JSON(bson.M{
+    "token": tokenString,
+    "people": user.People,
+  })
 }
 
 // @desc   Get people 
@@ -189,13 +204,26 @@ func getPeople(c *fiber.Ctx) error {
   var userID string
   json.Unmarshal([]byte(userIDLocals), &userID)
 
-  var user models.User
-  usersCollection.FindOne(context.Background(), bson.M{
-    "userID": userID,
-  }).Decode(&user)
+  // getting the userID
+  peopleLocals := fmt.Sprintf("%v", c.Locals("people"))
+  var people []string
+  json.Unmarshal([]byte(peopleLocals), &people)
 
+  var users []models.User
+  // all transactions
+  cursor, err := usersCollection.Find(context.Background(), bson.M{
+    "userID": bson.M{ 
+      "$in": people,
+    },
+  })
+  if err != nil {
+    return c.Status(500).SendString(fmt.Sprintf("%v", err))
+  }
+  if err = cursor.All(context.Background(), &users); err != nil {
+    return c.Status(500).SendString(fmt.Sprintf("%v", err))
+  }
 
-  return c.JSON(user.People)
+  return c.JSON(users)
 }
 
 // @desc   Change password
@@ -257,5 +285,18 @@ func changePassword(c *fiber.Ctx) error {
       "message": "Nu ați introdus parola validă.",
     }) 
   }
+}
+
+func getPerson(c *fiber.Ctx) error {
+  userID := c.Params("userID")
+
+  usersCollection := db.GetCollection("users")
+
+  var user models.User
+  usersCollection.FindOne(context.Background(), bson.M{
+    "userID": userID,
+  }).Decode(&user)
+
+  return c.JSON(user)
 }
 

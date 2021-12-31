@@ -23,39 +23,15 @@ func getTransactions(c *fiber.Ctx) error {
   json.Unmarshal([]byte(userIDLocals), &userID)
   fmt.Println("got the userID")
 
-  // var transactionsTo []models.Transaction
-  // var transactionsFrom []models.Transaction
   var transactions []models.Transaction
   transactionsCollection := db.GetCollection("transactions")
   fmt.Println("got the transactions collection")
 
-  // // transactionsTo
-  // cursor, err := transactionsCollection.Find(context.Background(), bson.M{
-  //   "to": userID,
-  // })
-  // if err != nil {
-  //   return c.Status(500).SendString(fmt.Sprintf("%v", err))
-  // }
-  // if err = cursor.All(context.Background(), &transactionsTo); err != nil {
-  //   return c.Status(500).SendString(fmt.Sprintf("%v", err))
-  // }
-
-  // // transactionFrom
-  // cursor, err = transactionsCollection.Find(context.Background(), bson.M{
-  //   "from": userID,
-  // })
-  // if err != nil {
-  //   return c.Status(500).SendString(fmt.Sprintf("%v", err))
-  // }
-  // if err = cursor.All(context.Background(), &transactionsFrom); err != nil {
-  //   return c.Status(500).SendString(fmt.Sprintf("%v", err))
-  // }
-
   // all transactions
   cursor, err := transactionsCollection.Find(context.Background(), bson.M{
     "$or": []bson.M {
-      bson.M{"to": userID},
-      bson.M{"from": userID},
+      {"to": userID},
+      {"from": userID},
     },
   })
   if err != nil {
@@ -64,8 +40,6 @@ func getTransactions(c *fiber.Ctx) error {
   if err = cursor.All(context.Background(), &transactions); err != nil {
     return c.Status(500).SendString(fmt.Sprintf("%v", err))
   }
-
-  // transactions := append(transactionsTo, transactionsFrom...)
 
   return c.JSON(transactions)
 }

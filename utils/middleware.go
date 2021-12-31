@@ -49,6 +49,10 @@ func UserMiddleware(c *fiber.Ctx) error {
     emailBytes, _ := json.Marshal(claims.Email)
     emailJSON := string(emailBytes)
     c.Locals("email", emailJSON)
+
+    peopleBytes, _ := json.Marshal(claims.People)
+    peopleJSON := string(peopleBytes)
+    c.Locals("people", peopleJSON)
   }
 
   if (token == "") {

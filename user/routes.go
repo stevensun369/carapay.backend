@@ -24,4 +24,8 @@ func Routes(app *fiber.App) {
   // get people
   g.Get("/people", utils.UserMiddleware, getPeople)
 
+  // get person
+  g.Get("/people/:userID", utils.UserMiddleware, getPerson)
+
+
 }
